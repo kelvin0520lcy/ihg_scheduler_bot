@@ -39,6 +39,9 @@ async def _set_commands(application: Application) -> None:
         BotCommand("dayschedule",    "All fixtures on a day — /dayschedule 2025-02-05"),
         BotCommand("freeslots",      "Free windows at a venue — /freeslots MPSH 1 | date | 2h"),
         BotCommand("mysubscriptions", "Your active subscriptions"),
+        BotCommand("addschedule",      "Admin: add schedule + clash check"),
+        BotCommand("changeschedule",   "Admin: change schedule + clash check"),
+        BotCommand("overallschedule",  "Admin: view overall upcoming schedule"),
     ])
 
 
