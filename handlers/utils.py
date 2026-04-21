@@ -23,7 +23,8 @@ def fmt_fixture(f: sqlite3.Row, show_id: bool = False) -> str:
 
     emoji  = STATUS_EMOJI.get(f["status"], "⚪")
     id_tag = f"  [ID: {f['id']}]" if show_id else ""
-    notes  = f"\n   📝 {f['notes']}" if f.get("notes") else ""
+    notes_val = f["notes"] if "notes" in f.keys() else ""
+    notes  = f"\n   📝 {notes_val}" if notes_val else ""
 
     status_label = f"  ({f['status'].upper()})" if f["status"] != "scheduled" else ""
 

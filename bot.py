@@ -39,9 +39,10 @@ async def _set_commands(application: Application) -> None:
         BotCommand("dayschedule",    "All fixtures on a day — /dayschedule 2025-02-05"),
         BotCommand("freeslots",      "Free windows at a venue — /freeslots MPSH 1 | date | 2h"),
         BotCommand("mysubscriptions", "Your active subscriptions"),
-        BotCommand("addschedule",      "Admin: add schedule + clash check"),
-        BotCommand("changeschedule",   "Admin: change schedule + clash check"),
-        BotCommand("overallschedule",  "Admin: view overall upcoming schedule"),
+        BotCommand("addschedule",      "Admin: guided add (calendar/time) + clash check"),
+        BotCommand("changeschedule",   "Admin: guided change + clash check"),
+        BotCommand("removefixture",    "Admin: guided remove (single/all)"),
+        BotCommand("overallschedule",  "Admin: choose calendar/list schedule view"),
     ])
 
 
@@ -75,12 +76,12 @@ def main() -> None:
 
     # ── Admin commands ───────────────────────────────────────────────────────
     app.add_handler(CommandHandler("addfixture",    admin.add_fixture))
-    app.add_handler(CommandHandler("addschedule",   admin.add_schedule))
+    app.add_handler(admin.addschedule_conversation())
     app.add_handler(CommandHandler("removefixture", admin.remove_fixture))
     app.add_handler(CommandHandler("postpone",      admin.postpone))
     app.add_handler(CommandHandler("cancelfix",     admin.cancel_fixture))
     app.add_handler(CommandHandler("reschedule",    admin.reschedule))
-    app.add_handler(CommandHandler("changeschedule", admin.change_schedule))
+    app.add_handler(admin.changeschedule_conversation())
     app.add_handler(CommandHandler("updatevenue",   admin.update_venue))
     app.add_handler(CommandHandler("listfixtures",  admin.list_fixtures))
     app.add_handler(CommandHandler("overallschedule", admin.overall_schedule))

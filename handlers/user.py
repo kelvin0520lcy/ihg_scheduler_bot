@@ -36,7 +36,8 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "your hall's matches, and stay updated on schedule changes.\n\n"
         "Use /help to see all available commands.\n"
         "If you are a Scheduling IC/admin, you can also use:\n"
-        "  `/addschedule`, `/changeschedule`, `/overallschedule`\n\n"
+        "  `/addschedule`, `/changeschedule`, `/overallschedule`\n"
+        "  (Use canonical sports: e.g. `Badminton (M)`, `Badminton (F)`, `Softball`)\n\n"
         "💡 Tip: Use /subscribe to get notified before your hall's matches.",
         parse_mode=ParseMode.MARKDOWN,
     )
@@ -64,9 +65,12 @@ async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "  /unsubscribe — remove a subscription\n"
         "  /mysubscriptions — see what you're subscribed to\n\n"
         "*Admin Scheduling (ICs only)*\n"
-        "  /addschedule `<sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>`\n"
-        "  /changeschedule `<id> | <YYYY-MM-DD HH:MM> [| <new_venue>]`\n"
-        "  /overallschedule `[days]` — consolidated upcoming schedule (default 14)\n\n"
+        "  /addschedule — guided flow (sport -> halls -> venue -> calendar -> time buttons)\n"
+        "      (or one-line: `<sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>`)\n"
+        "  /changeschedule — guided flow (pick fixture -> date -> time -> venue)\n"
+        "      (or one-line: `<id> | <YYYY-MM-DD HH:MM> [| <new_venue>]`)\n"
+        "  /removefixture — guided remove (single or remove all schedules)\n"
+        "  /overallschedule — choose calendar/list view (or `/overallschedule calendar 30`)\n\n"
         "📌 Reminders are sent *24 hours* and *2 hours* before each match "
         "to all subscribers of the relevant hall or sport.",
         parse_mode=ParseMode.MARKDOWN,

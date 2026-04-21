@@ -99,13 +99,22 @@ def get_fixture(fixture_id: int) -> Optional[sqlite3.Row]:
 
 def get_fixtures_by_sport(sport: str) -> list:
     now = now_str()
+    base = sport.strip()
+    if base.endswith(" (M)") or base.endswith(" (F)"):
+        with _conn() as conn:
+            return conn.execute(
+                "SELECT * FROM fixtures"
+                " WHERE lower(sport)=lower(?) AND status='scheduled' AND match_dt>=?"
+                " ORDER BY match_dt",
+                (sport, now),
+            ).fetchall()
+
     with _conn() as conn:
-        return conn.execute(
-            "SELECT * FROM fixtures"
-            " WHERE lower(sport)=lower(?) AND status='scheduled' AND match_dt>=?"
-            " ORDER BY match_dt",
-            (sport, now),
+        rows = conn.execute(
+            "SELECT * FROM fixtures WHERE status='scheduled' AND match_dt>=? ORDER BY match_dt",
+            (now,),
         ).fetchall()
+    return [r for r in rows if r["sport"] == base or r["sport"].startswith(f"{base} (")]
 
 
 def get_next_match(hall: str) -> Optional[sqlite3.Row]:
@@ -229,6 +238,15 @@ def delete_fixture(fixture_id: int) -> None:
     with _conn() as conn:
         conn.execute("DELETE FROM fixtures WHERE id=?", (fixture_id,))
         conn.execute("DELETE FROM reminders_sent WHERE fixture_id=?", (fixture_id,))
+
+
+def delete_all_fixtures() -> int:
+    """Delete all fixtures and reminder markers. Returns number of deleted fixtures."""
+    with _conn() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM fixtures").fetchone()[0]
+        conn.execute("DELETE FROM reminders_sent")
+        conn.execute("DELETE FROM fixtures")
+    return count
 
 
 def get_distinct_sports() -> list[str]:
