@@ -34,7 +34,9 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "👋 *Welcome to the IHG Scheduling Bot!*\n\n"
         "I help you look up Inter Hall Games fixtures, get reminders before "
         "your hall's matches, and stay updated on schedule changes.\n\n"
-        "Use /help to see all available commands.\n\n"
+        "Use /help to see all available commands.\n"
+        "If you are a Scheduling IC/admin, you can also use:\n"
+        "  `/addschedule`, `/changeschedule`, `/overallschedule`\n\n"
         "💡 Tip: Use /subscribe to get notified before your hall's matches.",
         parse_mode=ParseMode.MARKDOWN,
     )
@@ -61,6 +63,10 @@ async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "  /subscribe — get reminders for a hall or sport\n"
         "  /unsubscribe — remove a subscription\n"
         "  /mysubscriptions — see what you're subscribed to\n\n"
+        "*Admin Scheduling (ICs only)*\n"
+        "  /addschedule `<sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>`\n"
+        "  /changeschedule `<id> | <YYYY-MM-DD HH:MM> [| <new_venue>]`\n"
+        "  /overallschedule `[days]` — consolidated upcoming schedule (default 14)\n\n"
         "📌 Reminders are sent *24 hours* and *2 hours* before each match "
         "to all subscribers of the relevant hall or sport.",
         parse_mode=ParseMode.MARKDOWN,
