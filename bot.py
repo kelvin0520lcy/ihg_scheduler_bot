@@ -72,12 +72,15 @@ def main() -> None:
 
     # ── Admin commands ───────────────────────────────────────────────────────
     app.add_handler(CommandHandler("addfixture",    admin.add_fixture))
+    app.add_handler(CommandHandler("addschedule",   admin.add_schedule))
     app.add_handler(CommandHandler("removefixture", admin.remove_fixture))
     app.add_handler(CommandHandler("postpone",      admin.postpone))
     app.add_handler(CommandHandler("cancelfix",     admin.cancel_fixture))
     app.add_handler(CommandHandler("reschedule",    admin.reschedule))
+    app.add_handler(CommandHandler("changeschedule", admin.change_schedule))
     app.add_handler(CommandHandler("updatevenue",   admin.update_venue))
     app.add_handler(CommandHandler("listfixtures",  admin.list_fixtures))
+    app.add_handler(CommandHandler("overallschedule", admin.overall_schedule))
     app.add_handler(CommandHandler("checkclashes",  admin.check_clashes))
     app.add_handler(CommandHandler("announce",      admin.announce))
     app.add_handler(CommandHandler("addadmin",      admin.add_admin))

@@ -292,6 +292,59 @@ def check_hall_clashes() -> list:
         ).fetchall()
 
 
+def get_fixture_clashes(fixture_id: int) -> tuple[list, list]:
+    """
+    Return (venue_clashes, hall_clashes) for one fixture against all other
+    scheduled fixtures.
+    """
+    with _conn() as conn:
+        venue_clashes = conn.execute(
+            f"""
+            SELECT f.id id_target, o.id id_other,
+                   f.sport sport_target, o.sport sport_other,
+                   f.hall_a target_ha, f.hall_b target_hb,
+                   o.hall_a other_ha, o.hall_b other_hb,
+                   f.venue venue_target, o.venue venue_other,
+                   f.match_dt dt_target, o.match_dt dt_other
+            FROM fixtures f
+            JOIN fixtures o
+              ON f.id = ?
+             AND o.id != f.id
+             AND f.status = 'scheduled'
+             AND o.status = 'scheduled'
+             AND lower(f.venue) = lower(o.venue)
+             AND ABS(strftime('%s', f.match_dt) - strftime('%s', o.match_dt)) < ?
+            ORDER BY o.match_dt
+            """,
+            (fixture_id, VENUE_BUFFER_MINUTES * 60),
+        ).fetchall()
+
+        hall_clashes = conn.execute(
+            f"""
+            SELECT f.id id_target, o.id id_other,
+                   f.sport sport_target, o.sport sport_other,
+                   f.hall_a target_ha, f.hall_b target_hb,
+                   o.hall_a other_ha, o.hall_b other_hb,
+                   f.match_dt dt_target, o.match_dt dt_other
+            FROM fixtures f
+            JOIN fixtures o
+              ON f.id = ?
+             AND o.id != f.id
+             AND f.status = 'scheduled'
+             AND o.status = 'scheduled'
+             AND (
+                   lower(f.hall_a) IN (lower(o.hall_a), lower(o.hall_b))
+                OR lower(f.hall_b) IN (lower(o.hall_a), lower(o.hall_b))
+             )
+             AND ABS(strftime('%s', f.match_dt) - strftime('%s', o.match_dt)) < ?
+            ORDER BY o.match_dt
+            """,
+            (fixture_id, HALL_BUFFER_MINUTES * 60),
+        ).fetchall()
+
+    return venue_clashes, hall_clashes
+
+
 # ── Subscriptions ─────────────────────────────────────────────────────────────
 
 def subscribe(chat_id: int, sub_type: str, value: str) -> bool:

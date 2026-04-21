@@ -10,10 +10,13 @@ Real-world workflow reminder:
 
 Commands:
   /addfixture   <sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>
+  /addschedule  <sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>
   /removefixture <id>
   /postpone     <id> [reason]
   /cancelfix    <id> [reason]
   /reschedule   <id> | <YYYY-MM-DD HH:MM> [| <new_venue>]
+  /changeschedule <id> | <YYYY-MM-DD HH:MM> [| <new_venue>]
+  /overallschedule [days]
   /updatevenue  <id> | <new venue>
   /listfixtures [sport|hall|all]
   /checkclashes
@@ -99,6 +102,63 @@ async def add_fixture(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         f"✅ Fixture added (ID: {fixture_id})\n\n"
         f"{fmt_fixture(db.get_fixture(fixture_id), show_id=True)}",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
+def _format_fixture_clashes(fixture_id: int, venue_clashes: list, hall_clashes: list) -> str:
+    """Render clash details for a specific fixture."""
+    if not venue_clashes and not hall_clashes:
+        return "✅ No clash detected for this schedule."
+
+    lines = [f"⚠️ *Clash check for fixture #{fixture_id}:*"]
+    if venue_clashes:
+        lines.append("*🔴 Venue clashes* (same venue, too close):")
+        for c in venue_clashes:
+            lines.append(
+                f"  • with #{c['id_other']} — {c['venue_other']} @ {c['dt_other']} "
+                f"({c['sport_other']}: {c['other_ha']} vs {c['other_hb']})"
+            )
+    if hall_clashes:
+        lines.append("*🟡 Hall clashes* (same hall, too close):")
+        for c in hall_clashes:
+            lines.append(
+                f"  • with #{c['id_other']} @ {c['dt_other']} "
+                f"({c['sport_other']}: {c['other_ha']} vs {c['other_hb']})"
+            )
+    return "\n".join(lines)
+
+
+@admin_only
+async def add_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Usage: /addschedule <sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>
+
+    Adds a fixture and immediately runs clash checks for that fixture.
+    """
+    text = " ".join(ctx.args) if ctx.args else ""
+    parts = [p.strip() for p in text.split("|")]
+    if len(parts) != 5:
+        await update.message.reply_text(
+            "❌ Wrong format. Use:\n"
+            "`/addschedule <sport> | <hall_a> | <hall_b> | <venue> | <YYYY-MM-DD HH:MM>`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    sport, hall_a, hall_b, venue, raw_dt = parts
+    try:
+        match_dt = _parse_dt(raw_dt)
+    except ValueError as e:
+        await update.message.reply_text(f"❌ {e}")
+        return
+
+    fixture_id = db.add_fixture(sport, hall_a, hall_b, venue, match_dt)
+    fixture = db.get_fixture(fixture_id)
+    venue_clashes, hall_clashes = db.get_fixture_clashes(fixture_id)
+    clash_text = _format_fixture_clashes(fixture_id, venue_clashes, hall_clashes)
+    await update.message.reply_text(
+        f"✅ Schedule added.\n\n{fmt_fixture(fixture, show_id=True)}\n\n{clash_text}",
         parse_mode=ParseMode.MARKDOWN,
     )
 
@@ -231,6 +291,46 @@ async def reschedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"✅ Fixture {fid} rescheduled.\n\n{notice}", parse_mode=ParseMode.MARKDOWN)
 
 
+@admin_only
+async def change_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Usage: /changeschedule <id> | <YYYY-MM-DD HH:MM> [| <new venue>]
+
+    Updates schedule time/venue and immediately runs clash checks.
+    """
+    text = " ".join(ctx.args) if ctx.args else ""
+    parts = [p.strip() for p in text.split("|")]
+
+    if len(parts) < 2 or not parts[0].isdigit():
+        await update.message.reply_text(
+            "Usage: `/changeschedule <id> | <YYYY-MM-DD HH:MM> [| <new venue>]`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    fid = int(parts[0])
+    new_venue = parts[2] if len(parts) >= 3 else None
+    try:
+        new_dt = _parse_dt(parts[1])
+    except ValueError as e:
+        await update.message.reply_text(f"❌ {e}")
+        return
+
+    existing = db.get_fixture(fid)
+    if not existing:
+        await update.message.reply_text(f"❌ No fixture with ID {fid}.")
+        return
+
+    db.reschedule_fixture(fid, new_dt, new_venue)
+    updated = db.get_fixture(fid)
+    venue_clashes, hall_clashes = db.get_fixture_clashes(fid)
+    clash_text = _format_fixture_clashes(fid, venue_clashes, hall_clashes)
+    await update.message.reply_text(
+        f"✅ Schedule updated.\n\n{fmt_fixture(updated, show_id=True)}\n\n{clash_text}",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
 # ── /updatevenue ─────────────────────────────────────────────────────────────
 
 @admin_only
@@ -312,6 +412,55 @@ async def list_fixtures(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         for batch in chunk(fixtures, 8):
             page = "\n\n".join(fmt_fixture(f, show_id=True) for f in batch)
             await update.message.reply_text(page, parse_mode=ParseMode.MARKDOWN)
+
+
+@admin_only
+async def overall_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Usage: /overallschedule [days]
+    Example: /overallschedule 14
+    """
+    days = 14
+    if ctx.args:
+        if not ctx.args[0].isdigit():
+            await update.message.reply_text("Usage: `/overallschedule [days]`", parse_mode=ParseMode.MARKDOWN)
+            return
+        days = max(1, min(60, int(ctx.args[0])))
+
+    fixtures = db.get_upcoming_fixtures(days)
+    if not fixtures:
+        await update.message.reply_text(f"No scheduled fixtures in the next {days} day(s).")
+        return
+
+    lines = [f"🗓 *Overall Schedule — next {days} day(s)*"]
+    current_date = None
+    for f in fixtures:
+        date_part, time_part = f["match_dt"].split(" ")
+        if date_part != current_date:
+            current_date = date_part
+            lines.append(f"\n*{current_date}*")
+        lines.append(
+            f"  • {time_part} — {f['sport']}: {f['hall_a']} vs {f['hall_b']} @ {f['venue']} (#{f['id']})"
+        )
+
+    message = "\n".join(lines)
+    if len(message) <= 4000:
+        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        return
+
+    await update.message.reply_text(f"🗓 *Overall Schedule — next {days} day(s)*", parse_mode=ParseMode.MARKDOWN)
+    for batch in chunk(fixtures, 12):
+        page_lines = []
+        page_date = None
+        for f in batch:
+            date_part, time_part = f["match_dt"].split(" ")
+            if date_part != page_date:
+                page_date = date_part
+                page_lines.append(f"\n*{date_part}*")
+            page_lines.append(
+                f"  • {time_part} — {f['sport']}: {f['hall_a']} vs {f['hall_b']} @ {f['venue']} (#{f['id']})"
+            )
+        await update.message.reply_text("\n".join(page_lines), parse_mode=ParseMode.MARKDOWN)
 
 
 # ── /checkclashes ─────────────────────────────────────────────────────────────
