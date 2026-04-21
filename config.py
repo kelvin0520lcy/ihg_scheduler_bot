@@ -21,7 +21,7 @@ REMINDER_INTERVALS: list[int] = [24, 2]
 # ── NUS IHG halls (adjust if PGP status changes) ────────────────────────────
 HALLS: list[str] = [
     "Eusoff", "Kent Ridge", "King Edward VII",
-    "Raffles", "Sheares", "Temasek", "PGP",
+    "Raffles", "Sheares", "Temasek",
 ]
 
 # ── Common NUS IHG venues ────────────────────────────────────────────────────
